@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   hadoop:
-    image: 172.24.31.39:5000/hadoop-namenode
+    image: 172.31.19.185:5000/hadoop-namenode
     ports:
       - '50070:50070'
       - '8020:8020'
