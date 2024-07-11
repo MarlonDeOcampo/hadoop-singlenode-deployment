@@ -12,7 +12,7 @@ if [ "x$(docker service ls | grep local-registry)" == x ]; then
 fi
 
 echo "1- Start to push on registry the nodename docker image ..."
-docker-compose -f hadoop-build.yml build
-docker-compose -f hadoop-build.yml push
+docker compose -f hadoop-build.yml build
+docker compose -f hadoop-build.yml push
 echo "(1)End to build and push nodename image to registry."
 echo "-------------------------------------------------------\n"
