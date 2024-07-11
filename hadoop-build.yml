@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+  hadoop:
+    image: 172.24.31.39:5000/hadoop-namenode
+    ports:
+      - '50070:50070'
+      - '8020:8020'
+      - '9864:9864'
+      - '9866:9866'
+      - '9867:9867'
+    build:
+      context: ./
+      dockerfile: ./Hadoop-Dockerfile.yml

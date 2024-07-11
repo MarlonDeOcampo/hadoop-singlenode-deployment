@@ -1,0 +1,138 @@
+version: "3.8"
+networks:
+  hadoop-net:
+    driver: overlay
+volumes:
+  postgres-data:
+  warehouse:
+services:
+  namenode:
+    image: apache/hadoop:3
+    hostname: namenode
+    command: ["hdfs", "namenode"]
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == tns-ubu106
+    ports:
+      - 9870:9870
+      - 8020:8020
+      - 50070:50070
+    env_file:
+      - ./configs/hadoop_config
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+    networks:
+      - hadoop-net
+
+  datanode:
+    image: apache/hadoop:3
+    hostname: datanode
+    command: ["hdfs", "datanode"]
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == tns-ubu106
+    env_file:
+      - ./configs/hadoop_config   
+    networks:
+      - hadoop-net
+
+  resourcemanager:
+    image: apache/hadoop:3
+    hostname: resourcemanager
+    command: ["yarn", "resourcemanager"]
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == tns-ubu106
+    ports:
+      - 8088:8088
+    env_file:
+      - ./configs/hadoop_config
+    networks:
+      - hadoop-net
+
+  nodemanager:
+    image: apache/hadoop:3
+    hostname: nodemanager
+    command: ["yarn", "nodemanager"]
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == tns-ubu106
+    env_file:
+      - ./configs/hadoop_config
+    networks:
+      - hadoop-net
+
+  postgres_metastore:
+    image: postgres:13
+    hostname: postgres_metastore
+    environment:
+      POSTGRES_DB: metastore
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: hivepassword
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == tns-ubu106
+    volumes:
+      - ./configs/setup.sh:/docker-entrypoint-initdb.d/setup.sh:ro
+      - postgres-data:/var/lib/postgresql/data 
+    ports:
+      - 5432:5432
+    networks:
+      - hadoop-net
+
+  hiveserver2:
+    image: apache/hive:4.0.0
+    hostname: hiveserver2
+    ports:
+      - 10000:10000
+      - 10002:10002
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == tns-ubu106
+    environment:
+      HIVE_SERVER2_THRIFT_BIND_HOST: hiveserver2
+      HIVE_SERVER2_THRIFT_PORT: 10000
+      SERVICE_NAME: hiveserver2
+      HIVE_METASTORE_USERNAME: hiveuser
+      HIVE_METASTORE_PASSWORD: hivepassword
+      DB_DRIVER: postgres
+      IS_RESUME: "true"
+      POSTGRES_LOCAL_PATH: /opt/hive/lib/postgresql.jar
+      SERVICE_OPTS: "-Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver \
+      -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres_metastore:5432/metastore \
+      -Djavax.jdo.option.ConnectionUserName=${HIVE_METASTORE_USERNAME} \
+      -Djavax.jdo.option.ConnectionPassword=${HIVE_METASTORE_PASSWORD}"
+      
+    volumes:
+      - warehouse:/opt/hive/data/warehouse
+      - ./configs/postgresql-42.6.2.jar:/opt/hive/lib/postgresql.jar
+      - ./configs/hive-site.xml:/opt/hive/conf/hive-site.xml
+    networks:
+      - hadoop-net
+
+  hue:
+    image: gethue/hue:latest
+    user: "0:0"
+    hostname: hue
+    ports:
+      - 8888:8888
+    environment:
+      HADOOP_HOME: "/opt/hadoop"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == tns-ubu106
+    env_file:
+      # we need to share the config of hadoop so that hue can connect to it
+      - ./configs/hadoop_config
+    volumes:
+      - ./configs/hue.ini:/usr/share/hue/desktop/conf/hue.ini
+      - ./configs/hive-site.xml:/opt/hive/conf/hive-site.xml
+    networks:
+      - hadoop-net
