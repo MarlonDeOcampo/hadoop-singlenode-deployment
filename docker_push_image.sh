@@ -6,7 +6,7 @@ echo "--------------------------------------------------------------------------
 if [ "x$(docker service ls | grep local-registry)" == x ]; then
   echo "Adding Local Registry Server if not present....."
   docker network create --driver overlay hadoop-net
-  docker service create --name local-registry --publish published=5000,target=5000 --network hadoop-net registry:2
+  docker service create --name local-registry --publish published=5001,target=5001 --network hadoop-net registry:2
   echo "Local Registry Server Added.."
   echo "-------------------------------------------------------\n"
 fi
